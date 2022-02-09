@@ -1,2 +1,2 @@
-# crypto-ytt-starter
+# KlaytnNFTBApp
 Klaytn ERC721 BApp
