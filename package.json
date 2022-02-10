@@ -8,10 +8,10 @@
     "dev": "webpack-dev-server"
   },
   "dependencies": {
-    "caver-js": "1.0.0",
-    "truffle-hdwallet-provider-klaytn": "1.0.13-a",
+    "caver-js": "^1.2.0",
     "spin.js": "4.0.0",
-    "truffle": "5.0.31"
+    "truffle": "5.0.31",
+    "truffle-hdwallet-provider-klaytn": "1.0.13-a"
   },
   "devDependencies": {
     "copy-webpack-plugin": "4.6.0",

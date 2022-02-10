@@ -2,6 +2,7 @@ const YouTubeThumbnailToken = artifacts.require('./YouTubeThumbnailToken.sol')
 const fs = require('fs')
 
 module.exports = function (deployer) {
+  // 배포시 name, symbol 정의
   var name = "YouTube Thumbnail Token";
   var symbol = "YTT";
 
