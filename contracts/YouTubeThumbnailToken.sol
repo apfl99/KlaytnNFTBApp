@@ -9,8 +9,8 @@ contract YouTubeThumbnailToken is ERC721Full { //ERC721Full을 openzepplin라이
         string dateCreated;
     }
 
-    mapping(uint256 => YouTubeThumbnail) youTubeThumbnails; // tokenId -> (author, dateCreated)
-    mapping(string => uint256) videoIdsCreated; // videoId -> tokenId
+    mapping(uint256 => YouTubeThumbnail) youTubeThumbnails; // tokenId(key) -> (author, dateCreated)
+    mapping(string => uint256) videoIdsCreated; // videoId(key) -> tokenId
 
     // ERC721Full로 넘겨 주기 위한 객체 생성(배포시 deploy_YTT의 name,symbol 사용)
     constructor(string memory name, string memory symbol) ERC721Full(name, symbol) public {}
