@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol"; // 컨트랙 참조
 
 contract YouTubeThumbnailToken is ERC721Full { //ERC721Full을 openzepplin라이브러리에서 상속
   
@@ -30,11 +30,13 @@ contract YouTubeThumbnailToken is ERC721Full { //ERC721Full을 openzepplin라이
         videoIdsCreated[_videoId] = tokenId; //videoId를 키로 tokenId 저장 => 같은 videoId를 가진 토큰 등록 방지
 
         _mint(msg.sender, tokenId); // 토큰 발행(ERC721, ERC721Enumerable 둘 다에 있음)
-                                    // 그러면 어느 컨트랙에 있는 것을 사용
+                                    // 그러면 어느 컨트랙에 있는 것을 사용?
                                     // solidity 특성상 다중 상속시 C3 Linearization을 따름 -> 맨 오른쪽 컨트랙부터 검색
-                                    // ERC721Enumerable에 있는 _mint 상속
+                                    // ERC721Enumerable에 있는 _mint 
 
-        _setTokenURI(tokenId, _tokenURI); //tokenURI - tokenId(key) mapping
+        _setTokenURI(tokenId, _tokenURI); //ERC721MetaData 
+                                          //tokenURI - tokenId(key) mapping
+                                          //가스비 절감 목적으로 URI를 통해 토큰 핸들링
     }
 
     // 읽기 전용 함수 tokenId -> author, dateCreated
