@@ -7,6 +7,7 @@ const config = {
 const cav = new Caver(config.rpcURL);
 const yttContract = new cav.klay.Contract(DEPLOYED_ABI, DEPLOYED_ADDRESS);
 
+//ipfs setting
 var ipfsClient = require('ipfs-http-client');
 var ipfs = ipfsClient({ host: 'infura-ipfs.io', port: '5001', protocol: 'https' });
 
@@ -124,9 +125,10 @@ const App = {
   },
   //#endregion
 
+  //#region videoId로 토큰 유효성 검사
   checkTokenExists: async function () {   
     var videoId = $('#video-id').val();
-    var result = await this.isTokenAlreadyCreated(videoId);
+    var result = await this.isTokenAlreadyCreated(videoId); // 토큰 유효성 검사
 
     if (result) {
       $('#t-message').text('이미 토큰화된 썸네일 입니다');
@@ -136,46 +138,81 @@ const App = {
     }
   },
 
+  isTokenAlreadyCreated: async function (videoId) {
+    return await yttContract.methods.isTokenAlreadyCreated(videoId).call(); //from YoutubeThumbnailToken.sol
+  },
+
+  //#endregion videoId로 토큰 유효성 검사
+
+  //#region 토큰 발행 + 가스비 대납
   createToken: async function () {   
     var spinner = this.showSpinner();
+    //입력값 가져오기
     var videoId = $('#video-id').val();
     var title = $('#title').val();
     var author = $('#author').val();
     var dateCreated = $('#date-created').val();
 
+    //미입력 검사
     if (!videoId || !title || !author || !dateCreated) {
       spinner.stop();
       return;
     }
 
     try {
+      //ERC721 Metadata JSON Schema
       const metaData = this.getERC721MetadataSchema(videoId, title, `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`);
-      var res = await ipfs.add(Buffer.from(JSON.stringify(metaData)));
-      await this.mintYTT(videoId, author, dateCreated, res[0].hash);
+      var res = await ipfs.add(Buffer.from(JSON.stringify(metaData))); //ipfs에 파일 업로드 후 해쉬 값을 저장 -> 해쉬 값을 통해 용량 및 가스비 절감
+      await this.mintYTT(videoId, author, dateCreated, res[0].hash); // 블록체인에 토큰 발행 + 가스비 대납 
     } catch (err) {
       console.error(err);
       spinner.stop();
     }
   },  
 
+  //ERC721 Metadata JSON Schema format
+  getERC721MetadataSchema: function (videoId, title, imgUrl) {
+    return {
+      "title": "Asset Metadata",
+      "type": "object",
+      "properties": {
+          "name": {
+              "type": "string",
+              "description": videoId
+          },
+          "description": {
+              "type": "string",
+              "description": title
+          },
+          "image": {
+              "type": "string",
+              "description": imgUrl
+          }
+      }
+    }
+  },
+
   mintYTT: async function (videoId, author, dateCreated, hash) {    
-    const sender = this.getWallet();
-    const feePayer = cav.klay.accounts.wallet.add('0x270c77a5676ff167567ca278e31cb32032b771e9072f0f56dea49a72e4e81eba')
+    const sender = this.getWallet(); // 로그인 사용자
+    const feePayer = cav.klay.accounts.wallet.add('0x270c77a5676ff167567ca278e31cb32032b771e9072f0f56dea49a72e4e81eba') // 대납 계정
 
     // using the promise
+    // 트랜잭션 서명
     const { rawTransaction: senderRawTransaction } = await cav.klay.accounts.signTransaction({
-      type: 'FEE_DELEGATED_SMART_CONTRACT_EXECUTION',
-      from: sender.address,
-      to:   DEPLOYED_ADDRESS,
-      data: yttContract.methods.mintYTT(videoId, author, dateCreated, "https://infura-ipfs.io/ipfs/" + hash).encodeABI(),
+      type: 'FEE_DELEGATED_SMART_CONTRACT_EXECUTION', // 대납
+      from: sender.address, // 로그인 사용자
+      to:   DEPLOYED_ADDRESS, // 배포된 컨트랙 주소
+      data: yttContract.methods.mintYTT(videoId, author, dateCreated, "https://infura-ipfs.io/ipfs/" + hash).encodeABI(), // 토큰 발행 from YouTubeThumbnailToken.sol
       gas:  '500000',
-      value: cav.utils.toPeb('0', 'KLAY'),
-    }, sender.privateKey)
+      value: cav.utils.toPeb('0', 'KLAY'), // payable이 아니므로 0입력
+    }, sender.privateKey) // 서명
 
+    // 트랜잭션 보내기
     cav.klay.sendTransaction({
       senderRawTransaction: senderRawTransaction,
       feePayer: feePayer.address,
     })
+    // 영수증
     .then(function(receipt){
       if (receipt.transactionHash) {
         console.log("https://infura-ipfs.io/ipfs/" + hash);
@@ -184,45 +221,57 @@ const App = {
       }
     });
   },    
+  //#endregion 토큰 발행 + 가스비 대납
   
+  //#region setting token view UI My/All
   displayMyTokensAndSale: async function (walletInstance) {       
-   var balance = parseInt(await this.getBalanceOf(walletInstance.address));
+   var balance = parseInt(await this.getBalanceOf(walletInstance.address)); // 계정 보유 토큰 개수 리턴
 
    if (balance === 0) {
      $('#myTokens').text("현재 보유한 토큰이 없습니다.");
    } else {
      for (var i = 0; i < balance; i++) {
       (async () => {
+        // 토큰 정보 저장
         var tokenId = await this.getTokenOfOwnerByIndex(walletInstance.address, i);
         var tokenUri = await this.getTokenUri(tokenId);
         var ytt = await this.getYTT(tokenId);
         var metadata = await this.getMetadata(tokenUri);
-        this.renderMyTokens(tokenId, ytt, metadata);
+        this.renderMyTokens(tokenId, ytt, metadata); // HTML rendering
       })();      
      }
    }
   },   
 
-  displayAllTokens: async function (walletInstance) {   
-    var totalSupply = parseInt(await this.getTotalSupply());
-
-    if (totalSupply === 0) {
-      $('#allTokens').text("현재 발행된 토큰이 없습니다.");
-    } else {
-      for (var i = 0; i < totalSupply; i++) {
-        (async () => {
-          var tokenId = await this.getTokenByIndex(i);
-          var tokenUri = await this.getTokenUri(tokenId);
-          var ytt = await this.getYTT(tokenId);
-          var metadata = await this.getMetadata(tokenUri);
-          this.renderAllTokens(tokenId, ytt, metadata);
-        })();
-      }
-    }
+  getBalanceOf: async function (address) {
+    return await yttContract.methods.balanceOf(address).call(); //from ERC721
   },
-   
+
+  getTokenOfOwnerByIndex: async function (address, index) {
+    return await yttContract.methods.tokenOfOwnerByIndex(address, index).call(); //from ERC721Enumerable.sol
+  },
+
+  getTokenUri: async function (tokenId) {
+    return await yttContract.methods.tokenURI(tokenId).call(); // from ERC721Metadata.sol
+  },
+
+  getYTT: async function (tokenId) {
+    return await yttContract.methods.getYTT(tokenId).call(); // from YouTubeThumbnailToken.sol
+  },
+
+  getMetadata: function (tokenUri) {
+    //tokenUri -> metadata
+    return new Promise((resolve) => {
+      $.getJSON(tokenUri, data => {
+        resolve(data);
+      })
+    })
+  },
+
   renderMyTokens: function (tokenId, ytt, metadata) {    
     var tokens = $('#myTokens');
+
+    //template rendering
     var template = $('#MyTokensTemplate');
     template.find('.panel-heading').text(tokenId);
     template.find('img').attr('src', metadata.properties.image.description);
@@ -231,15 +280,40 @@ const App = {
     template.find('.author').text(ytt[0]);
     template.find('.date-created').text(ytt[1]);
 
-    tokens.append(template.html());
+    tokens.append(template.html()); //template -> tokens (MyTokensTemplate -> myTokens)
   },
 
-  renderMyTokensSale: function (tokenId, ytt, metadata, price) { 
-   
+  displayAllTokens: async function (walletInstance) {   
+    var totalSupply = parseInt(await this.getTotalSupply()); // 전체 토큰 개수 리턴
+
+    if (totalSupply === 0) {
+      $('#allTokens').text("현재 발행된 토큰이 없습니다.");
+    } else {
+      for (var i = 0; i < totalSupply; i++) {
+        (async () => {
+          //토큰 정보 저장
+          var tokenId = await this.getTokenByIndex(i);
+          var tokenUri = await this.getTokenUri(tokenId);
+          var ytt = await this.getYTT(tokenId);
+          var metadata = await this.getMetadata(tokenUri);
+          this.renderAllTokens(tokenId, ytt, metadata); // HTML rendering
+        })();
+      }
+    }
+  },
+
+  getTotalSupply: async function () {
+    return await yttContract.methods.totalSupply().call(); // from ERC721Enumerable.sol
+  },
+
+  getTokenByIndex: async function (index) {
+    return await yttContract.methods.tokenByIndex(index).call(); // from ERC721Enumerable.sol
   },
 
   renderAllTokens: function (tokenId, ytt, metadata) {   
     var tokens = $('#allTokens');
+
+    //template rendering
     var template = $('#AllTokensTemplate');
     template.find('.panel-heading').text(tokenId);
     template.find('img').attr('src', metadata.properties.image.description);
@@ -248,8 +322,15 @@ const App = {
     template.find('.author').text(ytt[0]);
     template.find('.date-created').text(ytt[1]);
 
-    tokens.append(template.html());
+    tokens.append(template.html()); //template -> tokens (AllTokensTemplate -> allTokens)
   },    
+  //#endregion setting token view UI
+
+
+  renderMyTokensSale: function (tokenId, ytt, metadata, price) { 
+   
+  },
+
 
   approve: function () {
       
@@ -274,64 +355,7 @@ const App = {
   onCancelApprovalSuccess: async function (walletInstance) {
   
   },     
-
-  isTokenAlreadyCreated: async function (videoId) {
-    return await yttContract.methods.isTokenAlreadyCreated(videoId).call();
-  },
-
-  getERC721MetadataSchema: function (videoId, title, imgUrl) {
-    return {
-      "title": "Asset Metadata",
-      "type": "object",
-      "properties": {
-          "name": {
-              "type": "string",
-              "description": videoId
-          },
-          "description": {
-              "type": "string",
-              "description": title
-          },
-          "image": {
-              "type": "string",
-              "description": imgUrl
-          }
-      }
-    }
-  },
-
-  getBalanceOf: async function (address) {
-    return await yttContract.methods.balanceOf(address).call();
-  },
-
-  getTokenOfOwnerByIndex: async function (address, index) {
-    return await yttContract.methods.tokenOfOwnerByIndex(address, index).call();
-  },
-
-  getTokenUri: async function (tokenId) {
-    return await yttContract.methods.tokenURI(tokenId).call();
-  },
-
-  getYTT: async function (tokenId) {
-    return await yttContract.methods.getYTT(tokenId).call();
-  },
-
-  getMetadata: function (tokenUri) {
-    return new Promise((resolve) => {
-      $.getJSON(tokenUri, data => {
-        resolve(data);
-      })
-    })
-  },
-
-  getTotalSupply: async function () {
-    return await yttContract.methods.totalSupply().call();
-  },
-
-  getTokenByIndex: async function (index) {
-    return await yttContract.methods.tokenByIndex(index).call();
-  },  
-
+  
   isApprovedForAll: async function (owner, operator) {
  
   },  
