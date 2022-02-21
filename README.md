@@ -23,21 +23,27 @@
 
 ## Presentation
 1. Login
+
 ![Hnet-image (4)](https://user-images.githubusercontent.com/64346003/154901288-dca1570b-f0b2-4762-98db-df0dce25c0b7.gif)
 
 2. Issuing NFT tokens.
+
 ![Hnet-image (4)](https://user-images.githubusercontent.com/64346003/154905463-bbebec1e-31ac-4c93-b309-0619391887e4.gif)
 
 3. Approval and cancellation of token sales.
+
 ![Hnet-image (5)](https://user-images.githubusercontent.com/64346003/154905920-1f85cb40-02aa-4bcf-9fb2-8d46d535c642.gif)
 
 4. Token sales registration.
+
 ![Hnet-image (6)](https://user-images.githubusercontent.com/64346003/154906390-941d8c4d-9092-4bdc-8764-d79e68638ddc.gif)
 
 5. Purchasing tokens.
+
 ![Hnet-image (7)](https://user-images.githubusercontent.com/64346003/154907962-fc8afc45-f809-4e3c-a982-df8cd438f587.gif)
 
 6. Check the transaction.
+
 ![Hnet-image (8)](https://user-images.githubusercontent.com/64346003/154908729-dd1ebef5-235f-4310-8e34-103a1d81696c.gif)
 
 ## Reference
