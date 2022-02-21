@@ -27,7 +27,8 @@
 ![Hnet-image (4)](https://user-images.githubusercontent.com/64346003/154901288-dca1570b-f0b2-4762-98db-df0dce25c0b7.gif)
 
 2. Issuing NFT tokens.
-
++ Tokens with the same video ID cannot be issued.
++ Token issuance costs are paid by the distribution account.
 ![Hnet-image (4)](https://user-images.githubusercontent.com/64346003/154905463-bbebec1e-31ac-4c93-b309-0619391887e4.gif)
 
 3. Approval and cancellation of token sales.
@@ -35,11 +36,12 @@
 ![Hnet-image (5)](https://user-images.githubusercontent.com/64346003/154905920-1f85cb40-02aa-4bcf-9fb2-8d46d535c642.gif)
 
 4. Token sales registration.
-
++ However, sellers cannot purchase their tokens.
++ Sales registration costs are paid by the distribution account.
 ![Hnet-image (6)](https://user-images.githubusercontent.com/64346003/154906390-941d8c4d-9092-4bdc-8764-d79e68638ddc.gif)
 
 5. Purchasing tokens.
-
++ After the purchase is completed, token transmission proceeds from the contract.
 ![Hnet-image (7)](https://user-images.githubusercontent.com/64346003/154907962-fc8afc45-f809-4e3c-a982-df8cd438f587.gif)
 
 6. Check the transaction.
