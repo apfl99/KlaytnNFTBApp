@@ -1,6 +1,7 @@
 # KlaytnNFTBApp
 #BlockChain
 #Klaytn
+#SmartContract
 #BApp
 
 ## Development Environment
@@ -12,35 +13,36 @@
 
 ## Execution
 1. Open Terminal
-<img width="942" alt="스크린샷 2022-01-27 오후 9 47 43" src="https://user-images.githubusercontent.com/64346003/151361876-661cde1f-e500-4a6b-be19-4e7630543a2c.png">
+<img width="900" alt="스크린샷 2022-02-21 오후 2 50 24" src="https://user-images.githubusercontent.com/64346003/154896912-63515dbb-29cd-4fec-a556-92541eb7d193.png">
 
 2. Compilation using truffle commands and distribution to klaytn(baobab testnet) networks.
-<img width="859" alt="스크린샷 2022-01-27 오후 9 50 13" src="https://user-images.githubusercontent.com/64346003/151362235-a12d8302-0453-4d5a-84ed-59eafe324947.png">
+<img width="925" alt="스크린샷 2022-02-21 오후 2 52 03" src="https://user-images.githubusercontent.com/64346003/154897063-ccaf9d14-aec4-4cd2-b400-6291262ec49d.png">
 
 3. Local web server Up
-<img width="998" alt="스크린샷 2022-01-27 오후 9 51 52" src="https://user-images.githubusercontent.com/64346003/151363225-fe3162ae-9f95-4062-a641-913a96ebd801.png">
-
+<img width="922" alt="스크린샷 2022-02-21 오후 2 52 54" src="https://user-images.githubusercontent.com/64346003/154897136-56e37a9e-ca19-464c-999e-377bb5ec5a9e.png">
 
 ## Presentation
 1. Login
+![Hnet-image (4)](https://user-images.githubusercontent.com/64346003/154901288-dca1570b-f0b2-4762-98db-df0dce25c0b7.gif)
 
-Using keystore file.
+2. Issuing NFT tokens.
+![issue_AdobeCreativeCloudExpress_AdobeCreativeCloudExpress](https://user-images.githubusercontent.com/64346003/154904759-c62e4f95-3438-4b4b-aaeb-aed53426f7ba.gif)
 
-![Login using keystore file](https://user-images.githubusercontent.com/64346003/151661470-02267a16-c3f9-40a4-a6f3-1990f730b684.gif)
+3. Approval and cancellation of token sales.
 
-Using privatekey.
+4. Token sales registration.
 
-![Login using privatekey](https://user-images.githubusercontent.com/64346003/151661500-0a9560b2-1fc1-4743-bd0a-ef3d933dd345.gif)
+5. View holding tokens, tokens in sales, and all tokens.
 
-2. Transfer money from the distributor's account to the contract.
+6. Purchasing tokens.
 
-![Transfer money from the distributor's account to the contract](https://user-images.githubusercontent.com/64346003/151661512-faa08bdb-418c-4e20-b41a-53be9042eca7.gif)
-
-3. Playing games and getting klaytn with a regular account.
-
-![Playing games and getting klaytn with a regular account](https://user-images.githubusercontent.com/64346003/151661522-ea210d62-0e4d-4922-9941-fe4d31c7d656.gif)
+7. Check the transaction.
 
 ## Reference
-https://www.inflearn.com/course/%ED%81%B4%EB%A0%88%EC%9D%B4%ED%8A%BC/dashboard
+https://www.inflearn.com/course/%ED%81%B4%EB%A0%88%EC%9D%B4%ED%8A%BC-%EB%B8%94%EB%A1%9D%EC%B2%B4%EC%9D%B8-%EC%96%B4%ED%94%8C%EB%A6%AC%EC%BC%80%EC%9D%B4%EC%85%98-erc721/dashboard
+
+https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
+
+https://github.com/OpenZeppelin/openzeppelin-contracts
 
 https://ko.docs.klaytn.com/bapp
