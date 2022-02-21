@@ -6,6 +6,7 @@ const config = {
 }
 const cav = new Caver(config.rpcURL);
 const yttContract = new cav.klay.Contract(DEPLOYED_ABI, DEPLOYED_ADDRESS);
+const tsContract = new cav.klay.Contract(DEPLOYED_ABI_TOKENSALES, DEPLOYED_ADDRESS_TOKENSALES);
 
 //ipfs setting
 var ipfsClient = require('ipfs-http-client');
@@ -110,7 +111,7 @@ const App = {
     
     await this.displayMyTokensAndSale(walletInstance);
     await this.displayAllTokens(walletInstance);
-    // ...
+    await this.checkApproval(walletInstance);
   },
 
   removeWallet: function () {
@@ -223,13 +224,14 @@ const App = {
   },    
   //#endregion 토큰 발행 + 가스비 대납
   
-  //#region setting token view UI My/All
-  displayMyTokensAndSale: async function (walletInstance) {       
-   var balance = parseInt(await this.getBalanceOf(walletInstance.address)); // 계정 보유 토큰 개수 리턴
+  //#region setting token view UI MyAndSale/All
+  displayMyTokensAndSale: async function (walletInstance) {    
+  var balance = parseInt(await this.getBalanceOf(walletInstance.address)); // 계정 보유 토큰 개수 리턴
 
    if (balance === 0) {
      $('#myTokens').text("현재 보유한 토큰이 없습니다.");
    } else {
+     var isApproved = await this.isApprovedForAll(walletInstance.address, DEPLOYED_ADDRESS_TOKENSALES); // 승인 여부 값
      for (var i = 0; i < balance; i++) {
       (async () => {
         // 토큰 정보 저장
@@ -237,7 +239,13 @@ const App = {
         var tokenUri = await this.getTokenUri(tokenId);
         var ytt = await this.getYTT(tokenId);
         var metadata = await this.getMetadata(tokenUri);
-        this.renderMyTokens(tokenId, ytt, metadata); // HTML rendering
+        var price = await this.getTokenPrice(tokenId);
+        this.renderMyTokens(tokenId, ytt, metadata, isApproved, price); // HTML rendering
+
+        if (parseInt(price) > 0){ // 판매중인 토큰
+          this.renderMyTokensSale(tokenId, ytt, metadata, price);
+        }
+
       })();      
      }
    }
@@ -268,17 +276,21 @@ const App = {
     })
   },
 
-  renderMyTokens: function (tokenId, ytt, metadata) {    
+  renderMyTokens: function (tokenId, ytt, metadata, isApproved, price) {    
     var tokens = $('#myTokens');
 
     //template rendering
     var template = $('#MyTokensTemplate');
-    template.find('.panel-heading').text(tokenId);
-    template.find('img').attr('src', metadata.properties.image.description);
-    template.find('img').attr('title', metadata.properties.description.description);
-    template.find('.video-id').text(metadata.properties.name.description);
-    template.find('.author').text(ytt[0]);
-    template.find('.date-created').text(ytt[1]);
+    this.getBasicTemplate(template, tokenId, ytt, metadata);
+
+    // 판매 버튼 조정
+    if(isApproved) { //승인 완료 토큰
+      if (parseInt(price) > 0) { // 판매중인 토큰
+        template.find('.sell-token').hide();
+      } else { // 판매 승인만 한 토큰
+        template.find('.sell-token').show();
+      }
+    }
 
     tokens.append(template.html()); //template -> tokens (MyTokensTemplate -> myTokens)
   },
@@ -296,7 +308,9 @@ const App = {
           var tokenUri = await this.getTokenUri(tokenId);
           var ytt = await this.getYTT(tokenId);
           var metadata = await this.getMetadata(tokenUri);
-          this.renderAllTokens(tokenId, ytt, metadata); // HTML rendering
+          var price = await this.getTokenPrice(tokenId);
+          var owner = await this.getOwnerOf(tokenId); // 구매 =! 판매 계정 확인
+          this.renderAllTokens(tokenId, ytt, metadata, price, owner, walletInstance); // HTML rendering
         })();
       }
     }
@@ -310,66 +324,229 @@ const App = {
     return await yttContract.methods.tokenByIndex(index).call(); // from ERC721Enumerable.sol
   },
 
-  renderAllTokens: function (tokenId, ytt, metadata) {   
+  renderAllTokens: function (tokenId, ytt, metadata, price, owner, wallletInstance) {   
     var tokens = $('#allTokens');
 
     //template rendering
     var template = $('#AllTokensTemplate');
+    this.getBasicTemplate(template, tokenId, ytt, metadata);
+
+    if(parseInt(price) > 0) { // 판매 중인 토큰
+
+      // 구매 UI 활성화
+      template.find('.buy-token').show();
+      template.find('.token-price').text(cav.utils.fromPeb(price, 'KLAY') + " KLAY");
+
+      if(owner.toUpperCase() === wallletInstance.address.toUpperCase()) { // 토큰 소유자와 현재 접속 계정이 같을 경우 
+        template.find('.btn-buy').attr('disabled', true); // 구매 비활성화
+      } else { // 다를 경우
+        template.find('.btn-buy').attr('disabled', false); // 구매 활성화
+      }
+    } else { // 판매 중인 토큰이 아닐 경우
+      template.find('.buy-token').hide(); // 구매 UI 비활성화
+    }
+
+    tokens.append(template.html()); //template -> tokens (AllTokensTemplate -> allTokens)
+  },
+
+  renderMyTokensSale: function (tokenId, ytt, metadata, price) { 
+    var tokens = $('#myTokensSale');
+
+    //template rendering
+    var template = $('#MyTokensSaleTemplate');
+    this.getBasicTemplate(template, tokenId, ytt, metadata);
+    template.find('.on-sale').text(cav.utils.fromPeb(price, 'KLAY') + " KLAY에 판매중");
+
+    tokens.append(template.html()); //template -> tokens (AllTokensTemplate -> allTokens)
+  },
+
+  // 판매 중 여부를 결정할 price 받아오기
+  getTokenPrice: async function (tokenId) {
+    return await tsContract.methods.tokenPrice(tokenId).call(); // tokenPrice : tokenId -> price
+   }, 
+
+   // 토큰 소유자 조회
+   getOwnerOf: async function (tokenId) {
+    return await yttContract.methods.ownerOf(tokenId).call();
+   },
+  //#endregion setting token view UI MyAndSale/All
+
+  //#region 토큰 판매 승인 및 취소
+
+  // 토큰 판매 승인
+  approve: function () {
+    this.showSpinner();
+    const walletInstance = this.getWallet();
+
+    // 토큰 판매 승인(토큰 소유 계정 대신 컨트랙이 토큰을 전송할 수 있도록) : 현 계정(토큰 소유 계정) -> TOKENSALES 컨트랙 
+    yttContract.methods.setApprovalForAll(DEPLOYED_ADDRESS_TOKENSALES, true).send({
+      from: walletInstance.address,
+      gas: '250000' 
+    }).then(function (receipt) {
+      if (receipt.transactionHash) {
+        location.reload();
+      }
+    });
+  },
+
+  // 토큰 판매 승인 여부 리턴 -> displayMyTokensAndSale 등 사용
+  isApprovedForAll: async function (owner, operator) {
+    return await yttContract.methods.isApprovedForAll(owner,operator).call(); //owner : 토큰 소유 계정, operator : 승인 컨트랙 주소
+  },
+  
+  // 토큰 판매 승인 취소(승인에서 매개값만 false)
+  cancelApproval: async function () {
+    this.showSpinner();
+    const walletInstance = this.getWallet();
+    const receipt = await yttContract.methods.setApprovalForAll(DEPLOYED_ADDRESS_TOKENSALES, false).send({ 
+      from: walletInstance.address,
+      gas: '250000' 
+    })
+
+    if(receipt.transactionHash) {
+      await this.onCancelApprovalSuccess(walletInstance);
+      location.reload();
+    }
+
+  },
+
+  // 판매 승인 상태 확인 및 UI 변경
+  checkApproval: async function(walletInstance) {
+    var isApproved = await this.isApprovedForAll(walletInstance.address, DEPLOYED_ADDRESS_TOKENSALES); // 판매 승인 여부 저장
+
+    if (isApproved) { 
+      $('#approve').hide();
+    } else {
+      $('#cancelApproval').hide();
+    }
+  },
+  //#endregion 토큰 판매 승인 및 취소
+
+  //#region 토큰 판매 등록(대납)
+  sellToken: async function (button) {
+    // button에서 받아온 데이터 저장
+    var divInfo = $(button).closest('.panel-primary');
+    var tokenId = divInfo.find('.panel-heading').text();
+    var amount = divInfo.find('.amount').val();
+
+    // 가격이 0보다 작을 경우 종료
+    if (amount <= 0) 
+      return;
+
+    try {
+      var spinner = this.showSpinner();
+
+      // mintYTT와 유사(대납)
+      const sender = this.getWallet(); // 로그인 사용자
+      const feePayer = cav.klay.accounts.wallet.add('0x270c77a5676ff167567ca278e31cb32032b771e9072f0f56dea49a72e4e81eba') // 대납 계정
+
+      // using the promise
+      // 트랜잭션 서명
+      const { rawTransaction: senderRawTransaction } = await cav.klay.accounts.signTransaction({
+        type: 'FEE_DELEGATED_SMART_CONTRACT_EXECUTION', // 대납
+        from: sender.address, // 로그인 사용자
+        to:   DEPLOYED_ADDRESS_TOKENSALES, // 판매 컨트랙 주소
+        data: tsContract.methods.setForSale(tokenId, cav.utils.toPeb(amount, 'KLAY')).encodeABI(), // 판매 등록(tokenId -> price 저장)
+        gas:  '500000',
+        value: cav.utils.toPeb('0', 'KLAY'), // payable이 아니므로 0입력
+      }, sender.privateKey) // 서명
+
+      cav.klay.sendTransaction({
+        senderRawTransaction: senderRawTransaction,
+        feePayer: feePayer.address,
+      })
+      .then(function(receipt){
+        if (receipt.transactionHash) {
+          alert(receipt.transactionHash);
+          location.reload();
+        }
+      });
+    } catch(err) {
+      console.error(err);
+      spinner.stop();
+    }
+  },
+  //#endregion 토큰 판매 등록(대납)
+ 
+  //#region 토큰 구매(구매 가스비에 대한 대납)
+  buyToken: async function (button) {
+    // button에서 받아온 데이터 저장
+    var divInfo = $(button).closest('.panel-primary');
+    var tokenId = divInfo.find('.panel-heading').text();
+    var price = await this.getTokenPrice(tokenId);
+
+    // 가격이 0보다 작을 경우 종료
+    if (price <= 0) 
+      return;
+
+    try {
+      var spinner = this.showSpinner();
+      const sender = this.getWallet(); // 로그인 사용자
+      const feePayer = cav.klay.accounts.wallet.add('0x270c77a5676ff167567ca278e31cb32032b771e9072f0f56dea49a72e4e81eba') // 대납 계정
+
+      // using the promise
+      // 트랜잭션 서명
+      const { rawTransaction: senderRawTransaction } = await cav.klay.accounts.signTransaction({
+        type: 'FEE_DELEGATED_SMART_CONTRACT_EXECUTION', // 대납
+        from: sender.address, // 로그인 사용자
+        to:   DEPLOYED_ADDRESS_TOKENSALES, // 배포된 컨트랙 주소
+        data: tsContract.methods.purchaseToken(tokenId).encodeABI(), // 구매 from TokenSales.sol
+        gas:  '500000',
+        value: price // 토큰 구입 가격
+      }, sender.privateKey) // 서명
+
+      cav.klay.sendTransaction({
+        senderRawTransaction: senderRawTransaction,
+        feePayer: feePayer.address,
+      })
+      .then(function(receipt){
+        if (receipt.transactionHash) {
+          alert(receipt.transactionHash);
+          location.reload();
+        }
+      });
+    } catch(err) {
+      console.error(err);
+      spinner.stop();
+    }
+  },
+  //#endregion 토큰 구매
+
+  //#region 판매 승인 취소 시 기존 판매 중인 토큰 판매 등록 철회
+  onCancelApprovalSuccess: async function (walletInstance) {
+    var balance = parseInt(await this.getBalanceOf(walletInstance.address)); // 토큰 소유 개수
+
+    if (balance > 0) {
+      var tokensOnSale = []; // 판매 중인 토큰의 tokenId 넣을 배열 
+      for (var i = 0; i < balance; i++) {
+        // tokenId -> price -> price > 0 로 판매 중인 토큰의 tokenId get
+        var tokenId = await this.getTokenOfOwnerByIndex(walletInstance.address, i);
+        var price = await this.getTokenPrice(tokenId);
+        if (parseInt(price) > 0)
+          tokensOnSale.push(tokenId);
+      }
+
+      if (tokensOnSale.length > 0) { 
+        const receipt = await tsContract.methods.removeTokenOnSale(tokensOnSale).send({ // from TokenSales.sol : 판매 등록 철회
+          from: walletInstance.address,
+          gas: '250000'
+        });
+
+        if (receipt.transactionHash)
+          alert(receipt.transactionHash);
+      }
+    }
+  },
+  //#endregion 판매 승인 취소 시 기존 판매 중인 토큰 토큰 판매 등록 철회
+
+  // 기본 UI
+  getBasicTemplate: function(template, tokenId, ytt, metadata) {  
     template.find('.panel-heading').text(tokenId);
     template.find('img').attr('src', metadata.properties.image.description);
     template.find('img').attr('title', metadata.properties.description.description);
     template.find('.video-id').text(metadata.properties.name.description);
     template.find('.author').text(ytt[0]);
     template.find('.date-created').text(ytt[1]);
-
-    tokens.append(template.html()); //template -> tokens (AllTokensTemplate -> allTokens)
-  },    
-  //#endregion setting token view UI
-
-
-  renderMyTokensSale: function (tokenId, ytt, metadata, price) { 
-   
-  },
-
-
-  approve: function () {
-      
-  },
-
-  cancelApproval: async function () {
-          
-  },
-
-  checkApproval: async function(walletInstance) {
-       
-  },
-
-  sellToken: async function (button) {    
-       
-  },
-
-  buyToken: async function (button) {
-      
-  },
-
-  onCancelApprovalSuccess: async function (walletInstance) {
-  
-  },     
-  
-  isApprovedForAll: async function (owner, operator) {
- 
-  },  
-
-  getTokenPrice: async function (tokenId) {
-   
-  },  
-
-  getOwnerOf: async function (tokenId) {
-   
-  },
-
-  getBasicTemplate: function(template, tokenId, ytt, metadata) {  
-  
   }
 };
 

@@ -49,6 +49,18 @@
                 data-target="#createTokenModal">
                 YTT 토큰 발행
         </button>      
+        <button type="button" 
+                class="btn btn-success pull-right" 
+                id="approve"
+                onclick="App.approve()">
+                토큰 판매 승인
+        </button>
+        <button type="button" 
+                class="btn btn-danger pull-right" 
+                id="cancelApproval"
+                onclick="App.cancelApproval()">
+                토큰 판매 승인 취소
+        </button>
       </div>      
     </div>
 
@@ -59,9 +71,11 @@
         <div id="tabs">
           <ul>
             <li><a href="#myTokens">내 보유 토큰</a></li>
+            <li><a href="#myTokensSale">내 판매 중 토큰</a></li>
             <li><a href="#allTokens">모든 토큰</a></li>
           </ul>
           <div id="myTokens"></div>
+          <div id="myTokensSale"></div>
           <div id="allTokens"></div>
         </div>
       </div>
@@ -153,6 +167,24 @@
   </div>
 </div>
 
+<div id="MyTokensSaleTemplate" style="display: none;">
+  <div class="col-sm-6 col-md-4 col-lg-3">
+    <div class="panel panel-primary">   
+      <div class="panel-heading"></div> 
+      <div class="panel-body">
+        <img style="width: 100%;" src="" title="">
+        <br/><br/>
+        <strong>영상 ID</strong>: <span class="video-id"></span><br/>
+        <strong>유튜버</strong>: <span class="author"></span><br/>
+        <strong>게시일</strong>: <span class="date-created"></span><br/>                
+      </div>  
+      <div class="panel-footer clearfix">         
+        <h5 class="on-sale" style="color:red;"></h5>    
+      </div>         
+    </div>
+  </div>
+</div>
+
 <div id="AllTokensTemplate" style="display: none;">
   <div class="col-sm-6 col-md-4 col-lg-3">
     <div class="panel panel-primary">   
@@ -177,7 +209,6 @@
     </div>
   </div>
 </div>
-
 </html>
 
 <style>

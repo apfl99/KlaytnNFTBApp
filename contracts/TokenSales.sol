@@ -7,7 +7,7 @@ contract TokenSales {
 ERC721Full public nftAddress; // YouTubeThumbnailToken 컨트랙을 불러오기 위한 변수
 mapping(uint256 => uint256) public tokenPrice; // _tokenId(key) -> _price
 
-constructor(address _tokenAddress) public { // _tokenAddress : YouTubeThumbnailToken 배포 주소
+constructor(address _tokenAddress) public { // _tokenAddress : YouTubeThumbnailToken 배포 주소 -> YouTubeThumbnailToken 컨트랙 주소는 3_deploy_TokenSales.js 에서 배포시 넘겨줌
       nftAddress = ERC721Full(_tokenAddress); // tokenAddress를 매개로 해당 컨트랙의 ERC721Full의 모든 내용을 참조할 수 있게 함
 }
 
@@ -20,7 +20,7 @@ function setForSale(uint256 _tokenId, uint256 _price) public {
     require(_price > 0, "price is zero or lower"); // 판매 가격 확인
     require(nftAddress.isApprovedForAll(tokenOwner, address(this)),"token owner did not approve TokenSales contract"); // 해당 컨트랙에 소유자가 권한 부여를 했는지 확인
 
-    tokenPrice[_tokenId] = _price; // 토큰별 가격 저장
+    tokenPrice[_tokenId] = _price; // 토큰별 가격 블록체인에 저장
 }
 
 //토큰 구매
@@ -42,7 +42,7 @@ function purchaseToken(uint256 _tokenId) public payable {
 }
 
 //토큰 판매 등록 철회
-function removeTokenOnSale(uint256[] memory tokenIds) public { // 판매중인 tokenId 받아옴
+function removeTokenOnSale(uint256[] memory tokenIds) public { // 계정이 소유한 토큰 중 판매중인 tokenId 받아옴
 
     //유효성 검사
     require(tokenIds.length > 0, "tokenIds is empty"); // 판매중인 토큰이 존재 여부 검사
