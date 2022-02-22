@@ -394,7 +394,7 @@ const App = {
     return await yttContract.methods.isApprovedForAll(owner,operator).call(); //owner : 토큰 소유 계정, operator : 승인 컨트랙 주소
   },
   
-  // 토큰 판매 승인 취소(승인에서 매개값만 false)
+  // 토큰 판매 승인 취소(승인에서 매개값만 false) 및 판매 등록 철회
   cancelApproval: async function () {
     this.showSpinner();
     const walletInstance = this.getWallet();
@@ -404,7 +404,7 @@ const App = {
     })
 
     if(receipt.transactionHash) {
-      await this.onCancelApprovalSuccess(walletInstance);
+      await this.onCancelApprovalSuccess(walletInstance); // 판매 등록 철회
       location.reload();
     }
 
@@ -514,7 +514,7 @@ const App = {
   },
   //#endregion 토큰 구매
 
-  //#region 판매 승인 취소 시 기존 판매 중인 토큰 판매 등록 철회
+  //#region 판매 승인 취소 시 기존 판매 중인 토큰 판매 등록 철회 - cancelApproval에서 call
   onCancelApprovalSuccess: async function (walletInstance) {
     var balance = parseInt(await this.getBalanceOf(walletInstance.address)); // 토큰 소유 개수
 
