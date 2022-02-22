@@ -242,7 +242,7 @@ const App = {
         var price = await this.getTokenPrice(tokenId);
         this.renderMyTokens(tokenId, ytt, metadata, isApproved, price); // HTML rendering
 
-        if (parseInt(price) > 0){ // 판매중인 토큰
+        if (parseInt(price) > 0){ // 판매중인 토큰 탭 렌더링
           this.renderMyTokensSale(tokenId, ytt, metadata, price);
         }
 
@@ -410,10 +410,11 @@ const App = {
 
   },
 
-  // 판매 승인 상태 확인 및 UI 변경
+  // 판매 승인 상태 확인 및 UI 변경 -> changeUI call
   checkApproval: async function(walletInstance) {
     var isApproved = await this.isApprovedForAll(walletInstance.address, DEPLOYED_ADDRESS_TOKENSALES); // 판매 승인 여부 저장
 
+    // 판매 승인 버튼
     if (isApproved) { 
       $('#approve').hide();
     } else {
@@ -478,7 +479,8 @@ const App = {
     // 가격이 0보다 작을 경우 종료
     if (price <= 0) 
       return;
-
+  
+    //mint YTT 대납과 유사
     try {
       var spinner = this.showSpinner();
       const sender = this.getWallet(); // 로그인 사용자
